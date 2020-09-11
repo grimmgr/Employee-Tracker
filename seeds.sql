@@ -18,12 +18,15 @@ VALUES ("John", "Doe", 1, 1), ("Mike", "Chan", 2, 4),
 ("Kevin", "Tupik", 5, 1), ("Tom", "Allen", 7, 3), 
 ("Chris", "Ecken", 4, 1);
 
+INSERT INTO employees (first_name, last_name, role_id, manager_id)
+VALUES ("Nero", "Bedero", 1, NULL);
+
+SELECT title
+FROM roles;
+-- UNION
+
 SELECT *
 FROM employees;
-
-UPDATE employees
-SET role_id = 3
-WHERE id = 4;
 
 -- view departments --
 -- SELECT name
@@ -46,4 +49,6 @@ WHERE id = 4;
 -- FROM employees
 -- JOIN dept_roles
 -- ON employees.role_id = dept_roles.id;
+
+
 

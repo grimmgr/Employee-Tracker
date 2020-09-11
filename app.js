@@ -1,26 +1,33 @@
 const inquirer = require('inquirer');
 const mysql = require('mysql');
 const cTable = require('console.table');
-const Department = require('./lib/Department');
-const Role = require('./lib/Role');
-const Employee = require('./lib/Employee');
+// const util = require('util');
+// const Department = require('./lib/Department');
+// const Role = require('./lib/Role');
+// const Employee = require('./lib/Employee');
 
-var db = mysql.createConnection({
+
+
+const db = mysql.createConnection({
     host: 'localhost',
     port: 3306,
     user: 'root',
     password: 'password',
     database: 'employee_db'
-  });
+});
   
-  db.connect(function(err) {
-    if (err) { throw err; }
-    initialPrompt();
-  });
+db.connect(function(err) {
+  if (err) { throw err; }
+  initialPrompt();
+});
 
-const departments = [];
-const roles = [];
-const employees = [];
+// const queryAsync = util.promisify(db.query);
+
+// const departments = [];
+// const roles = [];
+// const employees = [];
+
+
 
 const initialPrompt = () => {
     return inquirer
@@ -72,27 +79,30 @@ const initialPrompt = () => {
 }
 
 const viewDepartments = () => {
-    db.query(
-        'SELECT name FROM departments', (err, res) => {
-            if (err) { throw err; }
-        }
-    )
+    db.query( 'SELECT name AS \'departments\' FROM departments', (err, res) => {
+        if (err) { throw err };
+
+        console.log('');
+        console.table(res);
+    })
 }
 
 const viewRoles = () => {
-    db.query(
-        'SELECT title AS \'role\', name AS \'department\', salary FROM roles JOIN departments ON roles.department_id = departments.id', (err, res) => {
-            if (err) { throw err; }
-        }
-    );
+    db.query( 'SELECT title AS \'role\', name AS \'department\', salary FROM roles JOIN departments ON roles.department_id = departments.id', (err, res) => {
+        if (err) { throw err };
+        
+        console.log('');
+        console.table(res);
+    })
 }
 
 const viewEmployees = () => {
-    db.query(
-        'WITH dept_roles AS ( SELECT roles.id, name AS \'department\', title, salary FROM departments JOIN roles ON departments.id = roles.department_id ) SELECT employees.id, first_name, last_name, department, title, salary, manager_id FROM employees JOIN dept_roles ON employees.role_id = dept_roles.id', (err, res) => {
-            if (err) { throw err; }
-        }
-    );
+    db.query( 'WITH dept_roles AS ( SELECT roles.id, name AS \'department\', title, salary FROM departments JOIN roles ON departments.id = roles.department_id ) SELECT employees.id, first_name, last_name, department, title, salary, manager_id FROM employees JOIN dept_roles ON employees.role_id = dept_roles.id', (err, res) => {
+        if (err) { throw err };
+        
+        console.log('');
+        console.table(res);
+    });
 }
 
 const addDepartment = () => {
@@ -104,95 +114,172 @@ const addDepartment = () => {
           }
     )
     .then((answer) => {
-        new Department(answer.name);
+        // const newDept = new Department(answer.name);
         db.query(
             'INSERT INTO departments SET ?',
             { name:  answer.name }, 
             (err, res) => {
-                if (err) { throw err; }
+                if (err) { throw err };
             }
-        )
+        );
     })
     
 }
 
 const addRole = () => {
-    inquirer.prompt([
-        {
-            name: 'title',
-            type: 'input',
-            message: 'What is the title of the role you\'d like to add?'
-        },
-        {
-            name: 'salary',
-            type: 'input',
-            message: 'How much is the salary for this role?'
-        },
-        {
-            name: 'department',
-            type: 'list',
-            message: 'In which department is the role?',
-            choices: []
+
+    db.query('SELECT name FROM departments', (err, res) => {
+
+        if (err) {throw err};
+
+        let deptList = [];
+
+        for (let i = 0; i < res.length; i++) {
+            deptList.push(res[i].name);
         }
-    ])
-    .then((answer) => {
-        new Role(answer.title, answer.salary);
-        // let department_id = answer.department.getId();
-        db.query(
-            'INSERT INTO roles SET ?',
+
+        inquirer.prompt([
             {
-                title: answer.title,
-                salary: answer.salary,
-                department_id: answer.department.getDeptId()
+                name: 'title',
+                type: 'input',
+                message: 'What is the title of the role you\'d like to add?'
             },
-            (err, res) => {
-                if (err) { throw err; }
+            {
+                name: 'salary',
+                type: 'input',
+                message: 'How much is the salary for this role?'
+            },
+            {
+                name: 'department',
+                type: 'rawlist',
+                message: 'In which department is the role?',
+                choices: deptList
             }
-        )
+        ])
+        .then((answer) => {
+            // store role title and salary from inquirer prompts
+            const newRoleTitle = answer.title;
+            const newRoleSalary = answer.salary;
+            // find the department id
+            db.query('SELECT id FROM departments WHERE ?', { name: answer.department }, (err, res) => {
+                //handle error
+                if (err) {throw err};
+                // store department_id in variable
+                const newRoleDeptId = res[0].id;
+                // insert new role into database
+                db.query(
+                    'INSERT INTO roles SET ?',
+                    {
+                        title: newRoleTitle,
+                        salary: newRoleSalary,
+                        department_id: newRoleDeptId
+                    },
+                    (err, res) => {
+                        if (err) { throw err; }
+                    }
+                );
+            })
+        })
     })
 }
 
 const addEmployee = () => {
-    inquirer.prompt([
-        {
-            name: 'first_name',
-            type: 'input',
-            message: 'What is the employee\'s first name?'
-        },
-        {
-            name: 'last_name',
-            type: 'input',
-            message: 'What is the employee\'s last name?'
-        },
-        {
-            name: 'role',
-            type: 'list',
-            message: 'What is the employee\'s role?',
-            choices: []
-        },
-        {
-            name: 'manager',
-            type: 'list',
-            message: 'Who is the employee\'s manager?',
-            choices: []
-        }
-    ])
-    .then((answer) => {
-        new Employee(answer.first_name, answer.last_name, answer.role, answer.manager);
+    // get roles
+    db.query('SELECT title FROM roles', (err, res) => {
+        
+        if (err) {throw err};
+        
+        let rolesList = [];
 
-        db.query(
-            'INSERT INTO employees SET ?',
-            {
-                first_name: answer.first_name,
-                last_name: answer.last_name,
-                role_id: answer.role.getRoleId(),
-                manager_id: answer.manager.getEmployeeId()
-            },
-            (err, res) => {
-                if (err) { throw err; }
+        for (let i = 0; i < res.length; i++) {
+            rolesList.push(res[i].title);
+        }
+
+        db.query('SELECT first_name, last_name FROM employees', (err, res) => {
+
+            if (err) {throw err};
+
+            let employeesList = ['No manager'];
+
+            for (let i = 0; i < res.length; i++) {
+                employeesList.push(`${res[i].first_name} ${res[i].last_name}`);
             }
-        )
-    })
+
+            inquirer.prompt([
+                {
+                    name: 'first_name',
+                    type: 'input',
+                    message: 'What is the employee\'s first name?'
+                },
+                {
+                    name: 'last_name',
+                    type: 'input',
+                    message: 'What is the employee\'s last name?'
+                },
+                {
+                    name: 'role',
+                    type: 'list',
+                    message: 'What is the employee\'s role?',
+                    choices: rolesList
+                },
+                {
+                    name: 'manager',
+                    type: 'list',
+                    message: 'Who is the employee\'s manager?',
+                    choices: employeesList
+                }
+            ])
+            .then((answer) => {
+                const empFirstName = answer.first_name;
+                const empLastName = answer.last_name;
+                const empRole = answer.role;
+                const empManagerFirst = answer.manager.split(' ')[0];
+                const empManagerLast = answer.manager.split(' ')[1];
+                
+                db.query('SELECT id FROM roles WHERE ?', { title: empRole }, (err, res) => {
+
+                    if (err) { throw err };
+
+                    const empRoleId = res[0].id;
+
+                    if (answer.manager !== 'No manager') {
+
+                        db.query('SELECT id FROM employees WHERE ? AND ?', [{first_name: empManagerFirst}, {last_name: empManagerLast}], (err, res) => {
+                            if (err) {throw err};
+
+                            const empManagerId = res[0].id;
+
+                            db.query(
+                                'INSERT INTO employees SET ?',
+                                {
+                                    first_name: empFirstName,
+                                    last_name: empLastName,
+                                    role_id: empRoleId,
+                                    manager_id: empManagerId
+                                },
+                                (err, res) => {
+                                    if (err) { throw err; }
+                                }
+                            )
+                        });
+                    } else {
+                        db.query(
+                            'INSERT INTO employees SET ?',
+                            {
+                                first_name: empFirstName,
+                                last_name: empLastName,
+                                role_id: empRoleId,
+                                manager_id: null
+                            },
+                            (err, res) => {
+                                if (err) { throw err; }
+                            }
+                        );
+                    }
+                })
+            })
+        });
+    });
 }
 
 const updateEmployeeRoles = () => {
@@ -221,3 +308,4 @@ const updateEmployeeRoles = () => {
         )
     })
 }
+
