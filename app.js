@@ -42,9 +42,11 @@ const initialPrompt = () => {
             type: 'rawlist',
             message: 'What would you like to do?',
             choices: [
-              'View departments',
-              'View roles',
-              'View employees',
+              'View all departments',
+              'View all roles',
+              'View all employees',
+              'View all employees by department',
+              'View all employees by manager',
               'Add department',
               'Add role',
               'Add employee',
@@ -55,16 +57,24 @@ const initialPrompt = () => {
         })
         .then(function(answer) {
             switch (answer.action) {
-            case 'View departments':
+            case 'View all departments':
               viewDepartments();
               break;
       
-            case 'View roles':
+            case 'View all roles':
               viewRoles();
               break;
       
-            case 'View employees':
+            case 'View all employees':
               viewEmployees();
+              break;
+
+            case 'View all employees by department':
+              viewEmployeesByDepartment();
+              break;
+
+            case 'View all employees by manager':
+              viewEmployeesByManager();
               break;
       
             case 'Add department':
@@ -114,7 +124,27 @@ const viewRoles = () => {
 }
 
 const viewEmployees = () => {
-    db.query( 'WITH dept_roles AS ( SELECT roles.id, name AS \'department\', title, salary FROM departments JOIN roles ON departments.id = roles.department_id ) SELECT employees.id, first_name, last_name, department, title, salary, manager_id FROM employees JOIN dept_roles ON employees.role_id = dept_roles.id', (err, res) => {
+    db.query('SELECT e.id, e.first_name, e.last_name, departments.name AS \'department\', roles.title, roles.salary, CONCAT(m.first_name, \' \', m.last_name) AS \'manager\' FROM employees e LEFT JOIN employees m ON e.manager_id = m.id JOIN roles ON e.role_id = roles.id JOIN departments ON roles.department_id = departments.id', (err, res) => {
+        if (err) { throw err };
+        
+        console.log('');
+        console.table(res);
+        mainOrExit();
+    });
+}
+
+const viewEmployeesByDepartment = () => {
+    db.query( 'SELECT departments.name AS \'department\', e.id, e.first_name, e.last_name, roles.title, roles.salary, CONCAT(m.first_name, \' \', m.last_name) AS \'manager\' FROM employees e LEFT JOIN employees m ON e.manager_id = m.id JOIN roles ON e.role_id = roles.id JOIN departments ON roles.department_id = departments.id ORDER BY department', (err, res) => {
+        if (err) { throw err };
+        
+        console.log('');
+        console.table(res);
+        mainOrExit();
+    });
+}
+
+const viewEmployeesByManager = () => {
+    db.query( 'SELECT CONCAT(m.first_name, \' \', m.last_name) AS \'manager\', e.id, e.first_name, e.last_name, departments.name AS \'department\', roles.title, roles.salary FROM employees e LEFT JOIN employees m ON e.manager_id = m.id JOIN roles ON e.role_id = roles.id JOIN departments ON roles.department_id = departments.id ORDER BY manager', (err, res) => {
         if (err) { throw err };
         
         console.log('');
