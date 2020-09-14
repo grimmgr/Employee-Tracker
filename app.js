@@ -332,6 +332,8 @@ const addEmployee = () => {
                                     console.log('');
                                     console.log(`${empFirstName} ${empLastName} has been added`);
                                     console.log('');
+
+                                    mainOrExit();
                                 }
                             )
                         });
@@ -350,6 +352,8 @@ const addEmployee = () => {
                                 console.log('');
                                 console.log(`${empFirstName} ${empLastName} has been added.`);
                                 console.log('');
+
+                                mainOrExit();
                             }
                         );
                     }
@@ -417,7 +421,9 @@ const updateEmployeeRoles = () => {
                             (err, res) => {
                                 if (err) throw err;
 
-                                console.log(`${firstName} ${lastName}'s role has been changed.`)
+                                console.log(`${firstName} ${lastName}'s role has been changed.`);
+
+                                mainOrExit();
                             }
                         )
                     })
