@@ -52,6 +52,9 @@ const initialPrompt = () => {
               'Add employee',
               'Update employee roles',
               'Update employee\'s manager',
+              'Delete a department',
+              'Delete a role',
+              'Delete an employee',
               'Exit'
             ]
         })
@@ -95,6 +98,18 @@ const initialPrompt = () => {
 
             case 'Update employee\'s manager':
               updateEmployeeManager();
+              break;
+
+            case 'Delete a department':
+              deleteDepartment();
+              break;
+
+            case 'Delete a role':
+              deleteRole();
+              break;
+
+            case 'Delete an employee':
+              deleteEmployee();
               break;
 
             case 'Exit':
@@ -173,7 +188,6 @@ const addDepartment = () => {
                 mainOrExit();
         });
     })
-    
 }
 
 const addRole = () => {
@@ -479,4 +493,112 @@ const updateEmployeeManager = () => {
     });
 }
 
+const deleteDepartment = () => {
+    db.query('SELECT name FROM departments', (err, res) => {
 
+        if (err) {throw err};
+
+        let deptList = [];
+
+        for (let i = 0; i < res.length; i++) {
+            deptList.push(res[i].name);
+        }
+
+        inquirer.prompt([
+            {
+                name: 'department',
+                type: 'rawlist',
+                message: 'Which department would you like to delete?',
+                choices: deptList
+            }
+        ])
+        .then(answer => {
+            db.query('DELETE FROM departments WHERE ?', { name: answer.department }, (err, res) => {
+                if (err) throw err;
+
+                console.log('');
+                console.log(`${answer.department} deleted from departments.`)
+                console.log('');
+
+                mainOrExit();
+            })
+        })
+    })
+}
+
+const deleteRole = () => {
+    db.query('SELECT title FROM roles', (err, res) => {
+
+        if (err) {throw err};
+
+        let rolesList = [];
+
+        for (let i = 0; i < res.length; i++) {
+            rolesList.push(res[i].title);
+        }
+
+        inquirer.prompt([
+            {
+                name: 'role',
+                type: 'list',
+                message: 'Which role would you like to delete?',
+                choices: rolesList
+            }
+        ])
+        .then(answer => {
+            db.query('DELETE FROM roles WHERE ?', { title: answer.role }, (err, res) => {
+                if (err) throw err;
+
+                console.log('');
+                console.log(`${answer.role} deleted from departments.`)
+                console.log('');
+
+                mainOrExit();
+            })
+        })
+    })
+}
+
+const deleteEmployee = () => {
+    db.query('SELECT first_name, last_name FROM employees', (err, res) => {
+
+        if (err) {throw err};
+    
+        let employeesList = [];
+    
+        for (let i = 0; i < res.length; i++) {
+                employeesList.push(`${res[i].first_name} ${res[i].last_name}`);
+        }
+
+        inquirer.prompt([
+            {
+                name: 'employee',
+                type: 'list',
+                message: 'Which employee would you like to delete?',
+                choices: employeesList
+            }
+        ])
+        .then(answer => {
+
+            const empFirstName = answer.employee.split(' ')[0];
+            const empLastName = answer.employee.split(' ')[1];
+
+            db.query('SELECT id FROM employees WHERE ? AND ?', [{ first_name: empFirstName}, {last_name: empLastName }], (err, res) => {
+
+                if (err) throw err;
+
+                const employeeId = res[0].id;
+
+                db.query('DELETE FROM employees WHERE ?', { id: employeeId }, (err, res) => {
+                    if (err) throw err;
+
+                    console.log('');
+                    console.log(`${empFirstName} ${empLastName} deleted from employees.`)
+                    console.log('');
+
+                    mainOrExit();
+                })
+            });
+        })
+    })
+}
